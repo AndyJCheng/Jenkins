@@ -4,7 +4,7 @@ variable "name" {
 }
 
 variable "lambda_name" {
-  default = "hello_lambda"
+  default = "lambda_sample"
 }
 
 variable "description" {

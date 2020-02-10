@@ -1,6 +1,6 @@
 pipeline{
     agent{
-        label "node"
+        label "master"
     }
     stages{
         stage("checkout"){
@@ -8,44 +8,57 @@ pipeline{
                 git url:'https://github.com/AndyJCheng/lambda-apigateway.git'
             }
         }
+        stage("sonarqube"){
+            steps{
+                echo 'run sonarqube'
+            }
+
+        }
         stage("unittest"){
             steps{
-                dir("test"){
-                     git url:'https://github.com/JohnRDoe/PythonTests1.git'
-                     sh 'pytest -v test_sort.py --html=index.html'
-                }
-            }
-            post{
-              always{
-                  publishHTML(
+               
+                sh 'pytest lambda_test.py --html=index.html'
+                publishHTML(
                       [allowMissing: false, 
                       alwaysLinkToLastBuild: false, 
                       keepAll: false, 
-                      reportDir: 'test', 
+                      reportDir: '', 
                       reportFiles: 'index.html', 
                       reportName: 'HTML Report', 
-                      reportTitles: ''])
-              }
-          }
-
-        }
-        stage("sonarqube"){
-            steps{
-                sh 'run sonarqube'
+                      reportTitles: 'Report'])
+                }
             }
-
+           
+        stage("package"){
+            steps{
+                sh 'zip -r lambda_sample.zip lambda_sample.py'
+            }
         }
         stage("lambda"){
             steps{
-
+                dir('/root/lambda-apigateway/lambda'){
+                    sh "cp -rf ${WORKSPACE}/lambda_sample.zip ."
+                    sh 'terraform init'
+                    sh 'echo yes | terraform apply'
+                }
+                
             }
 
         }
         stage("api-gateway"){
             steps{
-
+                dir('/root/lambda-apigateway/api-gateway'){
+                    sh "cp -rf ${WORKSPACE}/*.yaml ."
+                    sh 'terraform init'
+                    sh 'echo yes | terraform apply'
+                }               
             }
-
+        }
+    }
+    post{
+        always{
+            echo "========clean workspace========"
+            cleanWs()
         }
     }
 }
