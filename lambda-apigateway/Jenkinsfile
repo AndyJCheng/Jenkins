@@ -16,9 +16,8 @@ pipeline{
         }
         stage("unittest"){
             steps{
-               
-                sh 'pytest lambda_test.py --html=index.html'
-                publishHTML(
+                  sh 'pytest --html=index.html'
+                    publishHTML(
                       [allowMissing: false, 
                       alwaysLinkToLastBuild: false, 
                       keepAll: false, 
@@ -26,20 +25,31 @@ pipeline{
                       reportFiles: 'index.html', 
                       reportName: 'HTML Report', 
                       reportTitles: 'Report'])
-                }
+                
+               }
+                
             }
            
         stage("package"){
             steps{
-                sh 'zip -r lambda_sample.zip lambda_sample.py'
+                script{
+                    name = sh(script: 'awk \'NR==2 {print $2}\' *test.py', returnStdout: true).trim()
+                    // handler = sh(script: 'awk \'NR==2 {print $2}\' test/*test.py', returnStdout: true).trim()
+                    sh "zip -r ${name}.zip ${name}.py"
+                }
+                
             }
         }
         stage("lambda"){
             steps{
                 dir('/root/lambda-apigateway/lambda'){
-                    sh "cp -rf ${WORKSPACE}/lambda_sample.zip ."
+                    script{
+                    name = sh(script: 'awk \'NR==2 {print $2}\' ${WORKSPACE}/*test.py', returnStdout: true).trim()
+                    handler = sh(script: 'awk \'NR==2 {print $2}\' ${WORKSPACE}/*test.py', returnStdout: true).trim()                  
+                }
+                    sh "cp -rf ${WORKSPACE}/${name}.zip ."
                     sh 'terraform init'
-                    sh 'echo yes | terraform apply'
+                    sh ". /etc/profile; echo yes | terraform apply -var lambda_name=${name} -var handler_name=${handler} -lock=false"
                 }
                 
             }
@@ -48,9 +58,12 @@ pipeline{
         stage("api-gateway"){
             steps{
                 dir('/root/lambda-apigateway/api-gateway'){
+                    script{
+                        name = sh(script: 'awk \'NR==2 {print $2}\'  ${WORKSPACE}/*test.py', returnStdout: true).trim()
+                    }
                     sh "cp -rf ${WORKSPACE}/*.yaml ."
                     sh 'terraform init'
-                    sh 'echo yes | terraform apply'
+                    sh ". /etc/profile; echo yes | terraform apply -var lambda_name=${name} -lock=false"
                 }               
             }
         }
@@ -58,7 +71,7 @@ pipeline{
     post{
         always{
             echo "========clean workspace========"
-            cleanWs()
+            // cleanWs()
         }
     }
 }

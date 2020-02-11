@@ -1,14 +1,21 @@
 provider "aws" {}
 
+variable "lambda_name" {
+  
+}
+
+variable "handler_name" {
+  
+}
+
 
 
 resource "aws_lambda_function" "lambda" {
-  function_name = "lambda_sample"
+  function_name = "${var.lambda_name}"
 
 
-  filename         = "lambda_sample.zip"
-  role    = "arn:aws:iam::245598999155:role/service-role/firstFunction-role-m
-5fqew7i"
-  handler = "lambda_sample.lambda_handler"
-  runtime = "python3.6"
+  filename = "${var.lambda_name}.zip"
+  role     = "arn:aws:iam::245598999155:role/service-role/firstFunction-role-m5fqew7i"
+  handler  = "${var.lambda_name}.${var.handler_name}"
+  runtime  = "python3.6"
 }

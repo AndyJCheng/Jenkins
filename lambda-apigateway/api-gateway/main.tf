@@ -5,7 +5,7 @@ data "template_file" "aws_api_swagger" {
   template = "${file(var.swagger-file_path)}"
 
   vars = {
-    lambda_name        = "${var.lambda_name}"
+    lambda_name = "${var.lambda_name}"
   }
 }
 resource "aws_api_gateway_rest_api" "api-gateway" {
